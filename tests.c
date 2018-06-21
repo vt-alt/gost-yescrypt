@@ -26,10 +26,16 @@
 #include "yescrypt.h"
 #include "crypt-yescrypt.h"
 
-static void print_yescrypt(const char *passwd, const char *salt,
+static int globerror = 0;
+#define RED	"\033[1;31m"
+#define GREEN	"\033[1;32m"
+#define NORM	"\033[m"
+
+static void test_yescrypt_kdf(const char *passwd, const char *salt,
     yescrypt_flags_t flags,
     uint64_t N, uint32_t r, uint32_t p, uint32_t t, uint32_t g,
-    uint32_t dklen)
+    uint32_t dklen,
+    uint8_t *match, uint32_t match_size)
 {
         yescrypt_local_t local;
         yescrypt_params_t params = {flags, N, r, p, t, g};
@@ -43,7 +49,8 @@ static void print_yescrypt(const char *passwd, const char *salt,
 #endif  
 
         if (dklen > sizeof(dk) || yescrypt_init_local(&local)) {
-                puts("FAILED");
+                puts(RED "FAILED" NORM);
+		globerror++;
                 return;
         }
 
@@ -54,7 +61,8 @@ static void print_yescrypt(const char *passwd, const char *salt,
             (const uint8_t *) passwd, strlen(passwd),
             (const uint8_t *) salt, strlen(salt), &params, dk, dklen)) {
                 yescrypt_free_local(&local);
-                puts(" FAILED");
+                puts(RED " FAILED" NORM);
+		globerror++;
                 return;
         }
 
@@ -63,20 +71,30 @@ static void print_yescrypt(const char *passwd, const char *salt,
         for (i = 0; i < dklen; i++)
                 printf("%02x", dk[i]);
         puts("");
+
+	if (dklen != match_size ||
+	    memcmp(dk, match, dklen) != 0) {
+		puts(RED "= BAD" NORM);
+		globerror++;
+	} else
+		puts(GREEN "= GOOD" NORM);
 }
 
-void test_crypt_gensalt_yescrypt(const char *prefix, unsigned long count)
+static void test_crypt_gensalt_yescrypt(const char *prefix, unsigned long count, char *match)
 {
 	char entropy[256] = {0};
 	char buf[256];
-	char *ret;
+	char *retval;
 
-	printf("- _crypt_gensalt_yescrypt_rn(count=%ld (N=%lu,r=%lu,t=%lu))\n",
-	    count, count & 0x3f, (count >> 6) & 0x3f, (count >> 12) & 0x3);
-	ret = _crypt_gensalt_yescrypt_rn(prefix, count, entropy, 5, buf, sizeof(buf));
+	printf("_crypt_gensalt_yescrypt_rn(count=%ld)", count);
+	if (count)
+		printf("[N=%lu,r=%lu,t=%lu]",
+		    count & 0x3f, (count >> 6) & 0x3f, (count >> 12) & 0x3);
 
-	printf("  = %s", ret);
-	if (ret == NULL) {
+	retval = _crypt_gensalt_yescrypt_rn(prefix, count, entropy, 5, buf, sizeof(buf));
+
+	printf(" = %s", retval);
+	if (retval == NULL) {
 		printf(", errno = ");
 		if (errno == EINVAL)
 			printf("EINVAL");
@@ -86,23 +104,72 @@ void test_crypt_gensalt_yescrypt(const char *prefix, unsigned long count)
 			printf("%d", errno);
 	}
 	printf("\n");
+	if (!retval ||
+	    strcmp(retval, match)) {
+		puts(RED "= BAD" NORM);
+		globerror++;
+	} else
+		puts(GREEN "= GOOD" NORM);
 }
 
+static char *test_yescrypt(const char *passwd, const char *setting)
+{
+	static char bufs[256];
+	char *retval;
+
+	retval = _crypt_yescrypt_rn(passwd, setting, bufs, sizeof(bufs));
+	printf("%s(%s) -> ", passwd, setting);
+	if (retval)
+		printf("%s", retval);
+	else {
+		if (errno == EINVAL)
+			printf("EINVAL");
+		else if (errno == ERANGE)
+			printf("ERANGE");
+		else
+			printf("%d", errno);
+	}
+	printf("\n");
+
+	return retval;
+}
+
+static void test_yescrypt_match(const char *passwd, const char *setting, const char *match)
+{
+	char *retval = test_yescrypt(passwd, setting);
+	if (retval && strcmp(match, retval) == 0)
+		printf(GREEN "= GOOD\n" NORM);
+	else {
+		printf(RED "= BAD\n" NORM);
+		globerror++;
+	}
+
+}
 int main(int argc, const char * const *argv)
 {
-        print_yescrypt("", "", 0, 16, 1, 1, 0, 0, 64);
-        print_yescrypt("", "", 0, 16, 1, 1, 0, 0, 8);
-        print_yescrypt("", "", 0, 4, 1, 1, 0, 0, 64);
+	uint8_t t1[] = {
+		0x77, 0xd6, 0x57, 0x62, 0x38, 0x65, 0x7b, 0x20,
+		0x3b, 0x19, 0xca, 0x42, 0xc1, 0x8a, 0x04, 0x97,
+		0xf1, 0x6b, 0x48, 0x44, 0xe3, 0x07, 0x4a, 0xe8,
+		0xdf, 0xdf, 0xfa, 0x3f, 0xed, 0xe2, 0x14, 0x42,
+		0xfc, 0xd0, 0x06, 0x9d, 0xed, 0x09, 0x48, 0xf8,
+		0x32, 0x6a, 0x75, 0x3a, 0x0f, 0xc8, 0x1f, 0x17,
+		0xe8, 0xd3, 0xe0, 0xfb, 0x2e, 0x0d, 0x36, 0x28,
+		0xcf, 0x35, 0xe2, 0x0c, 0x38, 0xd1, 0x89, 0x06
+	};
+	test_yescrypt_kdf("", "", 0, 16, 1, 1, 0, 0, 64, t1, sizeof(t1));
 
 #define NRT(n, r, t) ((n & 0x3f) | (r & 0x3f) << 6 | (t & 0x3) << 12)
 
-	test_crypt_gensalt_yescrypt("$y$", NRT(0, 0, 0));
-	test_crypt_gensalt_yescrypt("$y$", NRT(1, 0, 0));
-	test_crypt_gensalt_yescrypt("$y$", NRT(2, 1, 0));
-	test_crypt_gensalt_yescrypt("$y$", NRT(3, 2, 1));
-	test_crypt_gensalt_yescrypt("$y$", NRT(46, 2, 1));
-	test_crypt_gensalt_yescrypt("$y$", NRT(47, 2, 1));
-	test_crypt_gensalt_yescrypt("$y$", NRT(48, 2, 1));
-	test_crypt_gensalt_yescrypt("$y$", NRT(49, 2, 1));
+	test_crypt_gensalt_yescrypt("$y$", NRT(0, 0, 0), "$y$j9T$.......");
 
+	test_yescrypt_match("pleaseletmein", "$7$C6..../....SodiumChloride",
+	    "$7$C6..../....SodiumChloride$kBGj9fHznVYFQMEn/qDCfrDevf9YDtcDdKvEqHJLV8D");
+	test_yescrypt_match("pleaseletmein", "$7$06..../....SodiumChloride",
+	    "$7$06..../....SodiumChloride$ENlyo6fGw4PCcDBOFepfSZjFUnVatHzCcW55.ZGz3B0");
+	test_yescrypt_match("pleaseletmein", "$y$jD5.7$LdJMENpBABJJ3hIHjB1Bi.",
+	    "$y$jD5.7$LdJMENpBABJJ3hIHjB1Bi.$HboGM6qPrsK.StKYGt6KErmUYtioHreJd98oIugoNB6");
+	//test_crypt_yescrypt("passwordpassword");
+
+	return globerror;
 }
