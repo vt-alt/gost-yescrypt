@@ -20,9 +20,11 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include "sha256.h"
 #include "yescrypt.h"
+#include "crypt-yescrypt.h"
 
 static void print_yescrypt(const char *passwd, const char *salt,
     yescrypt_flags_t flags,
@@ -63,11 +65,44 @@ static void print_yescrypt(const char *passwd, const char *salt,
         puts("");
 }
 
+void test_crypt_gensalt_yescrypt(const char *prefix, unsigned long count)
+{
+	char entropy[256] = {0};
+	char buf[256];
+	char *ret;
+
+	printf("- _crypt_gensalt_yescrypt_rn(count=%ld (N=%lu,r=%lu,t=%lu))\n",
+	    count, count & 0x3f, (count >> 6) & 0x3f, (count >> 12) & 0x3);
+	ret = _crypt_gensalt_yescrypt_rn(prefix, count, entropy, 5, buf, sizeof(buf));
+
+	printf("  = %s", ret);
+	if (ret == NULL) {
+		printf(", errno = ");
+		if (errno == EINVAL)
+			printf("EINVAL");
+		else if (errno == ERANGE)
+			printf("ERANGE");
+		else
+			printf("%d", errno);
+	}
+	printf("\n");
+}
+
 int main(int argc, const char * const *argv)
 {
         print_yescrypt("", "", 0, 16, 1, 1, 0, 0, 64);
         print_yescrypt("", "", 0, 16, 1, 1, 0, 0, 8);
         print_yescrypt("", "", 0, 4, 1, 1, 0, 0, 64);
 
+#define NRT(n, r, t) ((n & 0x3f) | (r & 0x3f) << 6 | (t & 0x3) << 12)
+
+	test_crypt_gensalt_yescrypt("$y$", NRT(0, 0, 0));
+	test_crypt_gensalt_yescrypt("$y$", NRT(1, 0, 0));
+	test_crypt_gensalt_yescrypt("$y$", NRT(2, 1, 0));
+	test_crypt_gensalt_yescrypt("$y$", NRT(3, 2, 1));
+	test_crypt_gensalt_yescrypt("$y$", NRT(46, 2, 1));
+	test_crypt_gensalt_yescrypt("$y$", NRT(47, 2, 1));
+	test_crypt_gensalt_yescrypt("$y$", NRT(48, 2, 1));
+	test_crypt_gensalt_yescrypt("$y$", NRT(49, 2, 1));
 
 }

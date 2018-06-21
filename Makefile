@@ -21,6 +21,7 @@ PROJ = tests
 OBJS_CORE = yescrypt-opt.o
 OBJS_COMMON = yescrypt-common.o sha256.o insecure_memzero.o
 OBJS_TESTS = $(OBJS_CORE) $(OBJS_COMMON) tests.o
+OBJS_CRYPT = crypt-yescrypt.o
 OBJS_RM = yescrypt-*.o
 
 all: $(PROJ)
@@ -33,12 +34,12 @@ check: tests
 
 yescrypt-opt.o: yescrypt-platform.c
 
-tests: $(OBJS_TESTS)
-	$(LD) $(LDFLAGS) $(OBJS_TESTS) -o $@
+tests: $(OBJS_TESTS) $(OBJS_CRYPT)
+	$(LD) $(LDFLAGS) $(OBJS_TESTS) $(OBJS_CRYPT) -o $@
 
 clean:
 	$(RM) $(PROJ)
-	$(RM) $(OBJS_TESTS) $(OBJS_PHC) $(OBJS_INITROM) $(OBJS_USEROM)
+	$(RM) $(OBJS_TESTS)
 	$(RM) $(OBJS_RM)
 
 .PHONY: all check tests clean
