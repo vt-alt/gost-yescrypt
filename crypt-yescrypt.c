@@ -34,13 +34,15 @@ char *_crypt_gensalt_yescrypt_rn(const char *prefix, unsigned long count,
 	}
 
 	/* use as 'low default' one of recommended parameter sets */
-	yescrypt_params_t params = { .flags = YESCRYPT_DEFAULTS, .N = 4096, .r = 32, .p = 1 };
+	yescrypt_params_t params = { .flags = YESCRYPT_DEFAULTS,
+		.N = 4096, .r = 32, .p = 1 };
 
 	if (count) {
-		/* 'Simply double the value of N as many times as needed.  Since N must be a
-		 * power of two, you may use r (in the range of 8 to 32) or/and t (in the
-		 * range of 0 to 2) for fine-tuning the running time, but first bring N to
-		 * the maximum you can afford.' */
+		/* 'Simply double the value of N as many times as needed.
+		 * Since N must be a power of two, you may use r (in the range
+		 * of 8 to 32) or/and t (in the range of 0 to 2) for
+		 * fine-tuning the running time, but first bring N to the
+		 * maximum you can afford.' */
 		uint32_t nn = count & 0x3f;
 		if (nn < 2)
 			nn = 2;
@@ -75,14 +77,20 @@ char *_crypt_yescrypt_rn(const char *passwd, const char *setting, char *output, 
 	yescrypt_local_t local;
 	uint8_t *retval;
 
-	if (yescrypt_init_local(&local))
+	if (yescrypt_init_local(&local)) {
+		__set_errno(ENOMEM);
 		return NULL;
+	}
 	retval = yescrypt_r(NULL, &local,
 	    (const uint8_t *)passwd, strlen(passwd),
 	    (const uint8_t *)setting, NULL,
 	    (uint8_t *)output, size);
-	if (yescrypt_free_local(&local))
+	if (yescrypt_free_local(&local)) {
+		__set_errno(ENOMEM);
 		return NULL;
+	}
+	if (!retval)
+		__set_errno(EINVAL);
 	return (char *)retval;
 }
 
