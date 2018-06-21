@@ -19,4 +19,6 @@
 char *_crypt_gensalt_yescrypt_rn(const char *prefix, unsigned long count,
     const char *input, int input_size, char *output, int output_size);
 
+char *_crypt_yescrypt_rn(const char *passwd, const char *setting, char *output, int size);
+
 #endif

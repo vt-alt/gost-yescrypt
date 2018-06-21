@@ -58,8 +58,8 @@ char *_crypt_gensalt_yescrypt_rn(const char *prefix, unsigned long count,
 			tt = 2;
 		params.t = tt;
 	}
-#if 1
-	printf("yescrypt_encode_params_r(flags=%#x, N=%lu, r=%u, t=%u, p=%u)\n",
+#if 0
+	printf(": yescrypt_encode_params_r(flags=%#x, N=%lu, r=%u, t=%u, p=%u)\n",
 	    params.flags, params.N, params.r, params.t, params.p);
 #endif
 
@@ -74,4 +74,19 @@ char *_crypt_gensalt_yescrypt_rn(const char *prefix, unsigned long count,
 	return output;
 }
 
+char *_crypt_yescrypt_rn(const char *passwd, const char *setting, char *output, int size)
+{
+	yescrypt_local_t local;
+	uint8_t *retval;
+
+	if (yescrypt_init_local(&local))
+		return NULL;
+	retval = yescrypt_r(NULL, &local,
+	    (const uint8_t *)passwd, strlen(passwd),
+	    (const uint8_t *)setting, NULL,
+	    (uint8_t *)output, size);
+	if (yescrypt_free_local(&local))
+		return NULL;
+	return (char *)retval;
+}
 
