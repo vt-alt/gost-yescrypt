@@ -38,27 +38,20 @@ char *_crypt_gensalt_yescrypt_rn(const char *prefix, unsigned long count,
 		.N = 4096, .r = 32, .p = 1 };
 
 	if (count) {
-		/* 'Simply double the value of N as many times as needed.
-		 * Since N must be a power of two, you may use r (in the range
-		 * of 8 to 32) or/and t (in the range of 0 to 2) for
-		 * fine-tuning the running time, but first bring N to the
-		 * maximum you can afford.' */
-		uint32_t nn = count & 0x3f;
-		if (nn < 2)
-			nn = 2;
-		if (nn > 48)
-			nn = 48;
-		params.N = 1LL << nn;
-		uint32_t rr = (count >> 6) & 0x3f;
-		if (rr < 8)
-			rr = 8;
-		if (rr > 32)
-			rr = 32;
-		params.r = rr;
-		uint32_t tt = count >> (6 + 6);
-		if (tt > 2)
-			tt = 2;
-		params.t = tt;
+		/* `1 << (count - 1)` is MiB usage in range of 1MiB..1GiB,
+		 * thus, count is in range of 1..11 */
+		if (count <= 2) {
+			params.r = 8; /* N in 1KiB */
+			params.N = 512 << count;
+		} else if (count <= 11) {
+			params.r = 32; /* N in 4KiB */
+			params.N = 128 << count;
+		} else {
+			if (output_size > 0)
+				output[0] = '\0';
+			__set_errno(EINVAL);
+			return NULL;
+		}
 	}
 
 	if (!yescrypt_encode_params_r(&params, (const uint8_t *)input, input_size,
