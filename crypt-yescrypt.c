@@ -58,10 +58,6 @@ char *_crypt_gensalt_yescrypt_rn(const char *prefix, unsigned long count,
 			tt = 2;
 		params.t = tt;
 	}
-#if 0
-	printf(": yescrypt_encode_params_r(flags=%#x, N=%lu, r=%u, t=%u, p=%u)\n",
-	    params.flags, params.N, params.r, params.t, params.p);
-#endif
 
 	if (!yescrypt_encode_params_r(&params, (const uint8_t *)input, input_size,
 		    (uint8_t *)output, output_size)) {
