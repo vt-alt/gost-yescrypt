@@ -22,6 +22,8 @@ char *_crypt_gensalt_yescrypt_rn(const char *prefix, unsigned long count,
 char *_crypt_yescrypt_rn(const char *passwd, const char *setting, char *output, int size);
 
 /* crypt-gostyescrypt.c */
+void gost_hmac256(const uint8_t *k, size_t n, const uint8_t *t, size_t len, uint8_t *out32);
+
 char *_crypt_gensalt_gostyescrypt_rn(const char *prefix, unsigned long count,
     const char *input, int input_size, char *output, int output_size);
 

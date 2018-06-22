@@ -1,5 +1,6 @@
 /*-
- * Copyright 2013-2018 Alexander Peslyak
+ * Copyright 2018 vt@altlinux.org
+ * Based on work of (C) 2013-2018 Alexander Peslyak
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +32,14 @@ static int globerror = 0;
 #define RED	"\033[1;31m"
 #define GREEN	"\033[1;32m"
 #define NORM	"\033[m"
+
+static void dumphex(const void *ptr, size_t size)
+{
+	int i;
+
+	for (i = 0; i < size; i++)
+		printf("%02x", ((unsigned char *)ptr)[i]);
+}
 
 static void test_gost2012_hash(char *m, size_t size, size_t bits, char *match)
 {
@@ -229,6 +238,26 @@ static void test_gostyescrypt_match(const char *passwd, const char *setting, con
 	}
 }
 
+void test_gost_hmac256(const char *k, size_t ksize, const char *t, size_t tlen, const char *match)
+{
+	uint8_t digest[32];
+
+	printf("key: ");
+	dumphex(k, ksize);
+	printf("\nt:   ");
+	dumphex(t, tlen);
+	gost_hmac256((uint8_t *)k, ksize, (uint8_t *)t, tlen, digest);
+	printf("\nhmac=");
+	dumphex(digest, sizeof(digest));
+	puts("");
+
+	if (memcmp(digest, match, sizeof(digest))) {
+		printf(RED "= BAD\n" NORM);
+		globerror++;
+	} else
+		printf(GREEN "= GOOD\n" NORM);
+}
+
 int main(int argc, const char * const *argv)
 {
 	uint8_t t1[] = {
@@ -267,5 +296,14 @@ int main(int argc, const char * const *argv)
 
 	test_gostyescrypt_match("pleaseletmein", "$gy$j9T$.......",
 	    "$gy$j9T$.......$eDBdnMQ09ZrlEVlYu0/rxDfhQtkAwA6w3kUGudWlvf6");
+
+	/* HMAC_GOSTR3411_2012_256 test vectors from P 50.1.113-2016 */
+	test_gost_hmac256(
+	    "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
+	    "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f", 32,
+	    "\x01\x26\xbd\xb8\x78\x00\xaf\x21\x43\x41\x45\x65\x63\x78\x01\x00", 16,
+	    "\xa1\xaa\x5f\x7d\xe4\x02\xd7\xb3\xd3\x23\xf2\x99\x1c\x8d\x45\x34"
+	    "\x01\x31\x37\x01\x0a\x83\x75\x4f\xd0\xaf\x6d\x7c\xd4\x92\x2e\xd9"
+	    );
 	return globerror;
 }
