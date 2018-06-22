@@ -141,6 +141,8 @@ char *_crypt_gostyescrypt_rn(const char *passwd, const char *setting, char *outp
 		return NULL;
 	}
 	hptr++;
+
+	/* decode yescrypt output into its raw 256-bit form */
 	uint8_t y[32]; /* 256 bit */
 	size_t ylen = sizeof(y);
 	if (!decode64(y, &ylen, (uint8_t *)hptr, strlen(hptr)) ||
@@ -149,12 +151,11 @@ char *_crypt_gostyescrypt_rn(const char *passwd, const char *setting, char *outp
 		return NULL;
 	}
 
-	int i;
-	for (i = 0; i < sizeof(y); i++) {
-		y[i] = 255;
-		printf(":%02x", y[i]);
-	}
-	puts("");
+	/* apply HMAC_GOSTR3411_2012_256(K, yescrypt(K))
+	 * yescrypt output is used in place of message
+	 * thus, its crypto properties are superseded by GOST
+	 */
+	gost_hmac256((uint8_t *)passwd, strlen(passwd), y, sizeof(y), y);
 
 	/* squeeze data back into output buffer */
 	memmove(output + 1, output, outlen + 1);

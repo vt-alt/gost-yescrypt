@@ -337,10 +337,6 @@ int main(int argc, const char * const *argv)
 	puts("TEST crypt_gensalt_gostyescrypt");
 	test_crypt_gensalt_gostyescrypt("$gy$", 0, "$gy$j9T$.......");
 
-	puts("TEST crypt_gostyescrypt");
-	test_gostyescrypt_match("pleaseletmein", "$gy$j9T$.......",
-	    "$gy$j9T$.......$eDBdnMQ09ZrlEVlYu0/rxDfhQtkAwA6w3kUGudWlvf6");
-
 	puts("TEST HMAC_GOSTR3411_2012_256");
 	/* HMAC_GOSTR3411_2012_256 test vectors from P 50.1.113-2016 */
 	test_gost_hmac256(
@@ -350,6 +346,12 @@ int main(int argc, const char * const *argv)
 	    "\xa1\xaa\x5f\x7d\xe4\x02\xd7\xb3\xd3\x23\xf2\x99\x1c\x8d\x45\x34"
 	    "\x01\x31\x37\x01\x0a\x83\x75\x4f\xd0\xaf\x6d\x7c\xd4\x92\x2e\xd9"
 	    );
+
+	puts("TEST crypt_gostyescrypt");
+	test_gostyescrypt_match("pleaseletmein", "$gy$j9T$.......",
+	    "$gy$j9T$.......$y3eHoiJIRW/bLU2rGdNkXdW1TnjArbeHgnZIwwv/lSC");
+	test_gostyescrypt_match("pleaseletmeIn", "$gy$j9T$.......",
+	    "$gy$j9T$.......$cNRMqOo1BZoPJWXL7mL/XFcsMy7fBAjii7zMCDc2zZ1");
 
 	if (globerror)
 		printf("%d failed tests\n", globerror);
