@@ -292,11 +292,13 @@ int main(int argc, const char * const *argv)
 
 	puts("TEST gost2012_hash");
 	/* test vector from example A.1 from GOST-34.11-2012 */
-	test_gost2012_hash("012345678901234567890123456789012345678901234567890123456789012",
+	test_gost2012_hash(
+	    "012345678901234567890123456789012345678901234567890123456789012",
 	    512,
 	    "1b54d01a4af5b9d5cc3d86d68d285462b19abc2475222f35c085122be4ba1ffa"
 	    "00ad30f8767b3a82384c6574f024c311e2a481332b08ef7f41797891c1646f48");
-	test_gost2012_hash("012345678901234567890123456789012345678901234567890123456789012",
+	test_gost2012_hash(
+	    "012345678901234567890123456789012345678901234567890123456789012",
 	    256,
 	    "9d151eefd8590b89daa6ba6cb74af9275dd051026bb149a452fd84e5e57b5500");
 
@@ -308,7 +310,8 @@ int main(int argc, const char * const *argv)
 	    "\xED\xE0\x20\xF5\xF0\xE0\xE1\xF0\xFB\xFF\x20\xEF\xEB\xFA\xEA\xFB"
 	    "\x20\xC8\xE3\xEE\xF0\xE5\xE2\xFB",
 	    512,
-	    "1e88e62226bfca6f9994f1f2d51569e0daf8475a3b0fe61a5300eee46d961376035fe83549ada2b8620fcd7c496ce5b33f0cb9dddc2b6460143b03dabac9fb28");
+	    "1e88e62226bfca6f9994f1f2d51569e0daf8475a3b0fe61a5300eee46d961376"
+	    "035fe83549ada2b8620fcd7c496ce5b33f0cb9dddc2b6460143b03dabac9fb28");
 	test_gost2012_hash(
 	    "\xD1\xE5\x20\xE2\xE5\xF2\xF0\xE8\x2C\x20\xD1\xF2\xF0\xE8\xE1\xEE"
 	    "\xE6\xE8\x20\xE2\xED\xF3\xF6\xE8\x2C\x20\xE2\xE5\xFE\xF2\xFA\x20"
@@ -317,6 +320,19 @@ int main(int argc, const char * const *argv)
 	    "\x20\xC8\xE3\xEE\xF0\xE5\xE2\xFB",
 	    256,
 	    "9dd2fe4e90409e5da87f53976d7405b0c0cac628fc669a741d50063c557e8f50");
+
+	/* carry test */
+	test_gost2012_hash(
+	    "\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE"
+	    "\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE"
+	    "\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE"
+	    "\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE\xEE"
+	    "\x16\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11"
+	    "\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11"
+	    "\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11"
+	    "\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x16",
+	    256,
+	    "81bb632fa31fcc38b4c379a662dbc58b9bed83f50d3a1b2ce7271ab02d25babb");
 
 	puts("TEST crypt_gensalt_gostyescrypt");
 	test_crypt_gensalt_gostyescrypt("$gy$", 0, "$gy$j9T$.......");
@@ -334,5 +350,8 @@ int main(int argc, const char * const *argv)
 	    "\xa1\xaa\x5f\x7d\xe4\x02\xd7\xb3\xd3\x23\xf2\x99\x1c\x8d\x45\x34"
 	    "\x01\x31\x37\x01\x0a\x83\x75\x4f\xd0\xaf\x6d\x7c\xd4\x92\x2e\xd9"
 	    );
+
+	if (globerror)
+		printf("%d failed tests\n", globerror);
 	return globerror;
 }
