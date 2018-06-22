@@ -25,11 +25,36 @@
 #include "sha256.h"
 #include "yescrypt.h"
 #include "crypt-yescrypt.h"
+#include "gosthash2012.h"
 
 static int globerror = 0;
 #define RED	"\033[1;31m"
 #define GREEN	"\033[1;32m"
 #define NORM	"\033[m"
+
+static void test_gost2012_hash(char *m, size_t size, size_t bits, char *match)
+{
+	gost2012_hash_ctx ctx;
+	int i;
+
+	init_gost2012_hash_ctx(&ctx, bits);
+	gost2012_hash_block(&ctx, (unsigned char *)m, size);
+	uint8_t dg[bits / 8];
+	gost2012_finish_hash(&ctx, dg);
+
+	char dgt[bits / 4 + 1];
+        for (i = 0; i < sizeof(dg); i++) {
+                printf("%02x", dg[i]);
+		sprintf(&dgt[i * 2], "%02x", dg[i]);
+	}
+        puts("");
+
+	if (strcmp(dgt, match) != 0) {
+		puts(RED "= BAD" NORM);
+		globerror++;
+	} else
+		puts(GREEN "= GOOD" NORM);
+}
 
 static void test_yescrypt_kdf(const char *passwd, const char *salt,
     yescrypt_flags_t flags,
@@ -169,6 +194,15 @@ int main(int argc, const char * const *argv)
 	    "$7$06..../....SodiumChloride$ENlyo6fGw4PCcDBOFepfSZjFUnVatHzCcW55.ZGz3B0");
 	test_yescrypt_match("pleaseletmein", "$y$jD5.7$LdJMENpBABJJ3hIHjB1Bi.",
 	    "$y$jD5.7$LdJMENpBABJJ3hIHjB1Bi.$HboGM6qPrsK.StKYGt6KErmUYtioHreJd98oIugoNB6");
+
+	/* test vector from example A.1 from GOST-34.11-2012 */
+	test_gost2012_hash("012345678901234567890123456789012345678901234567890123456789012", 63,
+	    512,
+	    "1b54d01a4af5b9d5cc3d86d68d285462b19abc2475222f35c085122be4ba1ffa"
+	    "00ad30f8767b3a82384c6574f024c311e2a481332b08ef7f41797891c1646f48");
+	test_gost2012_hash("012345678901234567890123456789012345678901234567890123456789012", 63,
+	    256,
+	    "9d151eefd8590b89daa6ba6cb74af9275dd051026bb149a452fd84e5e57b5500");
 
 	return globerror;
 }

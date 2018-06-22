@@ -20,8 +20,9 @@ LDFLAGS = -s -lrt
 PROJ = tests
 OBJS_CORE = yescrypt-opt.o
 OBJS_COMMON = yescrypt-common.o sha256.o insecure_memzero.o
-OBJS_TESTS = $(OBJS_CORE) $(OBJS_COMMON) tests.o
 OBJS_CRYPT = crypt-yescrypt.o
+OBJS_GOST = gosthash2012.o
+OBJS_TESTS = $(OBJS_CORE) $(OBJS_COMMON) $(OBJS_GOST) $(OBJS_CRYPT) tests.o
 OBJS_RM = yescrypt-*.o
 
 all: $(PROJ)
@@ -33,9 +34,11 @@ check: tests
 	$(CC) -c $(CFLAGS) $*.c
 
 yescrypt-opt.o: yescrypt-platform.c
+gosthash2012.o: gosthash2012.h gosthash2012_const.h gosthash2012_precalc.h\
+	gosthash2012_ref.h gosthash2012_sse2.h
 
-tests: $(OBJS_TESTS) $(OBJS_CRYPT)
-	$(LD) $(LDFLAGS) $(OBJS_TESTS) $(OBJS_CRYPT) -o $@
+tests: $(OBJS_TESTS) $(OBJS_CRYPT) $(OBJS_GOST)
+	$(LD) $(LDFLAGS) $(OBJS_TESTS) -o $@
 
 clean:
 	$(RM) $(PROJ)
