@@ -41,23 +41,27 @@ static void dumphex(const void *ptr, size_t size)
 		printf("%02x", ((unsigned char *)ptr)[i]);
 }
 
-static void test_gost2012_hash(char *m, size_t size, size_t bits, char *match)
+static void test_gost2012_hash(char *m, size_t bits, char *match)
 {
 	gost2012_hash_ctx ctx;
 	int i;
+	size_t len = strlen(m);
 
+	printf("m[%lu] = ", len);
+	dumphex(m, len);
+	puts("");
 	init_gost2012_hash_ctx(&ctx, bits);
-	gost2012_hash_block(&ctx, (unsigned char *)m, size);
+	gost2012_hash_block(&ctx, (unsigned char *)m, len);
 	uint8_t dg[bits / 8];
 	gost2012_finish_hash(&ctx, dg);
 
-	char dgt[bits / 4 + 1];
-        for (i = 0; i < sizeof(dg); i++) {
-                printf("%02x", dg[i]);
-		sprintf(&dgt[i * 2], "%02x", dg[i]);
-	}
+	printf("digest(%ld) = ", bits);
+	dumphex(dg, sizeof(dg));
         puts("");
 
+	char dgt[bits / 4 + 1];
+	for (i = 0; i < sizeof(dg); i++)
+		sprintf(&dgt[i * 2], "%02x", dg[i]);
 	if (strcmp(dgt, match) != 0) {
 		puts(RED "= BAD" NORM);
 		globerror++;
@@ -260,6 +264,7 @@ void test_gost_hmac256(const char *k, size_t ksize, const char *t, size_t tlen, 
 
 int main(int argc, const char * const *argv)
 {
+	puts("TEST yescrypt_kdf");
 	uint8_t t1[] = {
 		0x77, 0xd6, 0x57, 0x62, 0x38, 0x65, 0x7b, 0x20,
 		0x3b, 0x19, 0xca, 0x42, 0xc1, 0x8a, 0x04, 0x97,
@@ -274,8 +279,10 @@ int main(int argc, const char * const *argv)
 
 #define NRT(n, r, t) ((n & 0x3f) | (r & 0x3f) << 6 | (t & 0x3) << 12)
 
+	puts("TEST crypt_gensalt_yescrypt");
 	test_crypt_gensalt_yescrypt("$y$", 0, "$y$j9T$.......");
 
+	puts("TEST crypt_yescrypt");
 	test_yescrypt_match("pleaseletmein", "$7$C6..../....SodiumChloride",
 	    "$7$C6..../....SodiumChloride$kBGj9fHznVYFQMEn/qDCfrDevf9YDtcDdKvEqHJLV8D");
 	test_yescrypt_match("pleaseletmein", "$7$06..../....SodiumChloride",
@@ -283,20 +290,42 @@ int main(int argc, const char * const *argv)
 	test_yescrypt_match("pleaseletmein", "$y$jD5.7$LdJMENpBABJJ3hIHjB1Bi.",
 	    "$y$jD5.7$LdJMENpBABJJ3hIHjB1Bi.$HboGM6qPrsK.StKYGt6KErmUYtioHreJd98oIugoNB6");
 
+	puts("TEST gost2012_hash");
 	/* test vector from example A.1 from GOST-34.11-2012 */
-	test_gost2012_hash("012345678901234567890123456789012345678901234567890123456789012", 63,
+	test_gost2012_hash("012345678901234567890123456789012345678901234567890123456789012",
 	    512,
 	    "1b54d01a4af5b9d5cc3d86d68d285462b19abc2475222f35c085122be4ba1ffa"
 	    "00ad30f8767b3a82384c6574f024c311e2a481332b08ef7f41797891c1646f48");
-	test_gost2012_hash("012345678901234567890123456789012345678901234567890123456789012", 63,
+	test_gost2012_hash("012345678901234567890123456789012345678901234567890123456789012",
 	    256,
 	    "9d151eefd8590b89daa6ba6cb74af9275dd051026bb149a452fd84e5e57b5500");
 
+	/* test vector from example A.2 from GOST-34.11-2012 */
+	test_gost2012_hash(
+	    "\xD1\xE5\x20\xE2\xE5\xF2\xF0\xE8\x2C\x20\xD1\xF2\xF0\xE8\xE1\xEE"
+	    "\xE6\xE8\x20\xE2\xED\xF3\xF6\xE8\x2C\x20\xE2\xE5\xFE\xF2\xFA\x20"
+	    "\xF1\x20\xEC\xEE\xF0\xFF\x20\xF1\xF2\xF0\xE5\xEB\xE0\xEC\xE8\x20"
+	    "\xED\xE0\x20\xF5\xF0\xE0\xE1\xF0\xFB\xFF\x20\xEF\xEB\xFA\xEA\xFB"
+	    "\x20\xC8\xE3\xEE\xF0\xE5\xE2\xFB",
+	    512,
+	    "1e88e62226bfca6f9994f1f2d51569e0daf8475a3b0fe61a5300eee46d961376035fe83549ada2b8620fcd7c496ce5b33f0cb9dddc2b6460143b03dabac9fb28");
+	test_gost2012_hash(
+	    "\xD1\xE5\x20\xE2\xE5\xF2\xF0\xE8\x2C\x20\xD1\xF2\xF0\xE8\xE1\xEE"
+	    "\xE6\xE8\x20\xE2\xED\xF3\xF6\xE8\x2C\x20\xE2\xE5\xFE\xF2\xFA\x20"
+	    "\xF1\x20\xEC\xEE\xF0\xFF\x20\xF1\xF2\xF0\xE5\xEB\xE0\xEC\xE8\x20"
+	    "\xED\xE0\x20\xF5\xF0\xE0\xE1\xF0\xFB\xFF\x20\xEF\xEB\xFA\xEA\xFB"
+	    "\x20\xC8\xE3\xEE\xF0\xE5\xE2\xFB",
+	    256,
+	    "9dd2fe4e90409e5da87f53976d7405b0c0cac628fc669a741d50063c557e8f50");
+
+	puts("TEST crypt_gensalt_gostyescrypt");
 	test_crypt_gensalt_gostyescrypt("$gy$", 0, "$gy$j9T$.......");
 
+	puts("TEST crypt_gostyescrypt");
 	test_gostyescrypt_match("pleaseletmein", "$gy$j9T$.......",
 	    "$gy$j9T$.......$eDBdnMQ09ZrlEVlYu0/rxDfhQtkAwA6w3kUGudWlvf6");
 
+	puts("TEST HMAC_GOSTR3411_2012_256");
 	/* HMAC_GOSTR3411_2012_256 test vectors from P 50.1.113-2016 */
 	test_gost_hmac256(
 	    "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
