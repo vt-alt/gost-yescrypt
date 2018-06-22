@@ -112,11 +112,37 @@ static void test_crypt_gensalt_yescrypt(const char *prefix, unsigned long count,
 	char *retval;
 
 	printf("_crypt_gensalt_yescrypt_rn(count=%ld)", count);
-	if (count)
-		printf("[N=%lu,r=%lu,t=%lu]",
-		    count & 0x3f, (count >> 6) & 0x3f, (count >> 12) & 0x3);
 
 	retval = _crypt_gensalt_yescrypt_rn(prefix, count, entropy, 5, buf, sizeof(buf));
+
+	printf(" = %s", retval);
+	if (retval == NULL) {
+		printf(", errno = ");
+		if (errno == EINVAL)
+			printf("EINVAL");
+		else if (errno == ERANGE)
+			printf("ERANGE");
+		else
+			printf("%d", errno);
+	}
+	printf("\n");
+	if (!retval ||
+	    strcmp(retval, match)) {
+		puts(RED "= BAD" NORM);
+		globerror++;
+	} else
+		puts(GREEN "= GOOD" NORM);
+}
+
+static void test_crypt_gensalt_gostyescrypt(const char *prefix, unsigned long count, char *match)
+{
+	char entropy[256] = {0};
+	char buf[256];
+	char *retval;
+
+	printf("_crypt_gensalt_gostyescrypt_rn(count=%ld)", count);
+
+	retval = _crypt_gensalt_gostyescrypt_rn(prefix, count, entropy, 5, buf, sizeof(buf));
 
 	printf(" = %s", retval);
 	if (retval == NULL) {
@@ -159,6 +185,28 @@ static char *test_yescrypt(const char *passwd, const char *setting)
 	return retval;
 }
 
+static char *test_gostyescrypt(const char *passwd, const char *setting)
+{
+	static char bufs[256];
+	char *retval;
+
+	retval = _crypt_gostyescrypt_rn(passwd, setting, bufs, sizeof(bufs));
+	printf("%s(%s) -> ", passwd, setting);
+	if (retval)
+		printf("%s", retval);
+	else {
+		if (errno == EINVAL)
+			printf("EINVAL");
+		else if (errno == ERANGE)
+			printf("ERANGE");
+		else
+			printf("%d", errno);
+	}
+	printf("\n");
+
+	return retval;
+}
+
 static void test_yescrypt_match(const char *passwd, const char *setting, const char *match)
 {
 	char *retval = test_yescrypt(passwd, setting);
@@ -168,8 +216,19 @@ static void test_yescrypt_match(const char *passwd, const char *setting, const c
 		printf(RED "= BAD\n" NORM);
 		globerror++;
 	}
-
 }
+
+static void test_gostyescrypt_match(const char *passwd, const char *setting, const char *match)
+{
+	char *retval = test_gostyescrypt(passwd, setting);
+	if (retval && strcmp(match, retval) == 0)
+		printf(GREEN "= GOOD\n" NORM);
+	else {
+		printf(RED "= BAD\n" NORM);
+		globerror++;
+	}
+}
+
 int main(int argc, const char * const *argv)
 {
 	uint8_t t1[] = {
@@ -186,7 +245,7 @@ int main(int argc, const char * const *argv)
 
 #define NRT(n, r, t) ((n & 0x3f) | (r & 0x3f) << 6 | (t & 0x3) << 12)
 
-	test_crypt_gensalt_yescrypt("$y$", NRT(0, 0, 0), "$y$j9T$.......");
+	test_crypt_gensalt_yescrypt("$y$", 0, "$y$j9T$.......");
 
 	test_yescrypt_match("pleaseletmein", "$7$C6..../....SodiumChloride",
 	    "$7$C6..../....SodiumChloride$kBGj9fHznVYFQMEn/qDCfrDevf9YDtcDdKvEqHJLV8D");
@@ -204,5 +263,9 @@ int main(int argc, const char * const *argv)
 	    256,
 	    "9d151eefd8590b89daa6ba6cb74af9275dd051026bb149a452fd84e5e57b5500");
 
+	test_crypt_gensalt_gostyescrypt("$gy$", 0, "$gy$j9T$.......");
+
+	test_gostyescrypt_match("pleaseletmein", "$gy$j9T$.......",
+	    "$gy$j9T$.......$eDBdnMQ09ZrlEVlYu0/rxDfhQtkAwA6w3kUGudWlvf6");
 	return globerror;
 }

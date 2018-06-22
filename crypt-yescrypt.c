@@ -26,7 +26,11 @@
 char *_crypt_gensalt_yescrypt_rn(const char *prefix, unsigned long count,
     const char *input, int input_size, char *output, int output_size)
 {
-	if (prefix[0] != '$' || prefix[1] != 'y' || prefix[2] != '$') {
+	/* allow NULL prefix */
+	if (prefix &&
+	    (prefix[0] != '$' ||
+	     prefix[1] != 'y' ||
+	     prefix[2] != '$')) {
 		if (output_size > 0)
 			output[0] = '\0';
 		__set_errno(EINVAL);
