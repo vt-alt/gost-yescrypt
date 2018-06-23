@@ -35,7 +35,8 @@ check: tests
 yescrypt-opt.o: yescrypt-platform.c
 gosthash2012.o: gosthash2012.h gosthash2012_const.h gosthash2012_precalc.h\
 	gosthash2012_ref.h gosthash2012_sse2.h
-crypt-gostyescrypt.o: yescrypt-common.c
+crypt-yescrypt.o: yescrypt.h crypt-yescrypt.h
+crypt-gostyescrypt.o: yescrypt.h yescrypt-common.c crypt-yescrypt.h gosthash2012.h
 
 tests: $(OBJS_TESTS)
 	$(LD) $(LDFLAGS) $(OBJS_TESTS) -o $@
