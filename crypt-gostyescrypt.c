@@ -49,16 +49,12 @@ void gost_hmac256(const uint8_t *k, size_t n, const uint8_t *t, size_t len, uint
 	int i;
 
 	/* P 50.1.113-2016 only allowed n to be in range 256..512 */
-	if (n <= B) {
+	if (n >= L && n <= B) {
 		for (i = 0; i < sizeof(pad); i++)
 			kstar[i] = i < n ? k[i] : 0;
-	} else {
-		/* by RFC2104 (3) */
-		init_gost2012_hash_ctx(&ctx, BITS);
-		gost2012_hash_block(&ctx, k, n);
-		gost2012_finish_hash(&ctx, kstar);
-		memset(kstar + L, 0, B - L);
-	}
+	} else
+		abort();
+
 	init_gost2012_hash_ctx(&ctx, BITS);
 	for (i = 0; i < sizeof(pad); i++)
 		pad[i] = kstar[i] ^ 0x36; /* ipad */
