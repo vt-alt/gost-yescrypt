@@ -25,6 +25,17 @@
 #include "crypt-yescrypt.h"
 #include "gosthash2012.h"
 
+/* GOST2012_256 */
+void gost_hash256(const uint8_t *t, size_t n, uint8_t *out32)
+{
+	const unsigned int BITS = 256;
+	gost2012_hash_ctx ctx;
+
+	init_gost2012_hash_ctx(&ctx, BITS);
+	gost2012_hash_block(&ctx, t, n);
+	gost2012_finish_hash(&ctx, out32);
+}
+
 /* HMAC_GOSTR3411_2012_256 */
 void gost_hmac256(const uint8_t *k, size_t n, const uint8_t *t, size_t len, uint8_t *out32)
 {
@@ -102,12 +113,21 @@ char *_crypt_gostyescrypt_rn(const char *passwd, const char *setting, char *outp
 	yescrypt_local_t local;
 	uint8_t *retval;
 
-	if (yescrypt_init_local(&local)) {
+	if (!output ||
+	    size < 2 ||
+	    !setting ||
+	    yescrypt_init_local(&local)) {
 		__set_errno(ENOMEM);
 		return NULL;
 	}
+
 	/* convert gost setting to yescrypt setting */
-	char *gsetting = alloca(strlen(setting) + 1);
+	char *gsetting = malloc(strlen(setting) + 1);
+	if (!gsetting) {
+		__set_errno(ENOMEM);
+		yescrypt_free_local(&local);
+		return NULL;
+	}
 	gsetting[0] = '$';
 	gsetting[1] = 'y';
 	gsetting[2] = '$';
@@ -116,18 +136,20 @@ char *_crypt_gostyescrypt_rn(const char *passwd, const char *setting, char *outp
 	retval = yescrypt_r(NULL, &local,
 	    (const uint8_t *)passwd, strlen(passwd),
 	    (const uint8_t *)gsetting, NULL,
-	    (uint8_t *)output, size);
+	    (uint8_t *)output + 1, size - 1);
+
+	free(gsetting);
+	gsetting = NULL;
 	if (yescrypt_free_local(&local)) {
 		__set_errno(ENOMEM);
 		return NULL;
 	}
-	size_t outlen = strlen(output);
-	/* will extend only by one byte */
-	if (!retval ||
-	    outlen + 2 > size) {
+	if (!retval) {
 		__set_errno(EINVAL);
 		return NULL;
 	}
+	output[0] = '$';
+	output[1] = 'g';
 
 	/* extract yescrypt output from "$y$param$salt$output" */
 	char *hptr = strchr((const char *)retval + 3, '$');
@@ -140,7 +162,7 @@ char *_crypt_gostyescrypt_rn(const char *passwd, const char *setting, char *outp
 		__set_errno(EINVAL);
 		return NULL;
 	}
-	hptr++;
+	hptr++; /* start of output */
 
 	/* decode yescrypt output into its raw 256-bit form */
 	uint8_t y[32]; /* 256 bit */
@@ -151,16 +173,17 @@ char *_crypt_gostyescrypt_rn(const char *passwd, const char *setting, char *outp
 		return NULL;
 	}
 
-	/* apply HMAC_GOSTR3411_2012_256(K, yescrypt(K))
+	/*
+	 * HMAC_GOSTR3411_2012_256(GOST2012_256(K), yescrypt(K))
 	 * yescrypt output is used in place of message
 	 * thus, its crypto properties are superseded by GOST
+	 * password is always hashed for hmac to avoid collisions
 	 */
-	gost_hmac256((uint8_t *)passwd, strlen(passwd), y, sizeof(y), y);
+	uint8_t hk[32];
+	gost_hash256((uint8_t *)passwd, strlen(passwd), hk);
+	gost_hmac256(hk, sizeof(hk), y, sizeof(y), y);
 
-	/* squeeze data back into output buffer */
-	memmove(output + 1, output, outlen + 1);
-	output[1] = 'g';
-	encode64((uint8_t *)hptr + 1, size - (hptr - output), y, sizeof(y));
+	encode64((uint8_t *)hptr, size - (hptr - output), y, sizeof(y));
 
 	return output;
 }

@@ -41,25 +41,23 @@ static void dumphex(const void *ptr, size_t size)
 		printf("%02x", ((unsigned char *)ptr)[i]);
 }
 
-static void test_gost2012_hash(char *m, size_t bits, char *match)
+static void test_gost2012_hash(char *m, char *match)
 {
-	gost2012_hash_ctx ctx;
 	int i;
 	size_t len = strlen(m);
 
 	printf("m[%lu] = ", len);
 	dumphex(m, len);
 	puts("");
-	init_gost2012_hash_ctx(&ctx, bits);
-	gost2012_hash_block(&ctx, (unsigned char *)m, len);
-	uint8_t dg[bits / 8];
-	gost2012_finish_hash(&ctx, dg);
 
-	printf("digest(%ld) = ", bits);
+	uint8_t dg[32];
+	gost_hash256((uint8_t *)m, len, dg);
+
+	printf("digest(%ld) = ", sizeof(dg));
 	dumphex(dg, sizeof(dg));
         puts("");
 
-	char dgt[bits / 4 + 1];
+	char dgt[32 * 2 + 1];
 	for (i = 0; i < sizeof(dg); i++)
 		sprintf(&dgt[i * 2], "%02x", dg[i]);
 	if (strcmp(dgt, match) != 0) {
@@ -294,12 +292,6 @@ int main(int argc, const char * const *argv)
 	/* test vector from example A.1 from GOST-34.11-2012 */
 	test_gost2012_hash(
 	    "012345678901234567890123456789012345678901234567890123456789012",
-	    512,
-	    "1b54d01a4af5b9d5cc3d86d68d285462b19abc2475222f35c085122be4ba1ffa"
-	    "00ad30f8767b3a82384c6574f024c311e2a481332b08ef7f41797891c1646f48");
-	test_gost2012_hash(
-	    "012345678901234567890123456789012345678901234567890123456789012",
-	    256,
 	    "9d151eefd8590b89daa6ba6cb74af9275dd051026bb149a452fd84e5e57b5500");
 
 	/* test vector from example A.2 from GOST-34.11-2012 */
@@ -309,16 +301,6 @@ int main(int argc, const char * const *argv)
 	    "\xF1\x20\xEC\xEE\xF0\xFF\x20\xF1\xF2\xF0\xE5\xEB\xE0\xEC\xE8\x20"
 	    "\xED\xE0\x20\xF5\xF0\xE0\xE1\xF0\xFB\xFF\x20\xEF\xEB\xFA\xEA\xFB"
 	    "\x20\xC8\xE3\xEE\xF0\xE5\xE2\xFB",
-	    512,
-	    "1e88e62226bfca6f9994f1f2d51569e0daf8475a3b0fe61a5300eee46d961376"
-	    "035fe83549ada2b8620fcd7c496ce5b33f0cb9dddc2b6460143b03dabac9fb28");
-	test_gost2012_hash(
-	    "\xD1\xE5\x20\xE2\xE5\xF2\xF0\xE8\x2C\x20\xD1\xF2\xF0\xE8\xE1\xEE"
-	    "\xE6\xE8\x20\xE2\xED\xF3\xF6\xE8\x2C\x20\xE2\xE5\xFE\xF2\xFA\x20"
-	    "\xF1\x20\xEC\xEE\xF0\xFF\x20\xF1\xF2\xF0\xE5\xEB\xE0\xEC\xE8\x20"
-	    "\xED\xE0\x20\xF5\xF0\xE0\xE1\xF0\xFB\xFF\x20\xEF\xEB\xFA\xEA\xFB"
-	    "\x20\xC8\xE3\xEE\xF0\xE5\xE2\xFB",
-	    256,
 	    "9dd2fe4e90409e5da87f53976d7405b0c0cac628fc669a741d50063c557e8f50");
 
 	/* carry test */
@@ -331,7 +313,6 @@ int main(int argc, const char * const *argv)
 	    "\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11"
 	    "\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11"
 	    "\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x16",
-	    256,
 	    "81bb632fa31fcc38b4c379a662dbc58b9bed83f50d3a1b2ce7271ab02d25babb");
 
 	puts("TEST crypt_gensalt_gostyescrypt");
@@ -349,9 +330,7 @@ int main(int argc, const char * const *argv)
 
 	puts("TEST crypt_gostyescrypt");
 	test_gostyescrypt_match("pleaseletmein", "$gy$j9T$.......",
-	    "$gy$j9T$.......$y3eHoiJIRW/bLU2rGdNkXdW1TnjArbeHgnZIwwv/lSC");
-	test_gostyescrypt_match("pleaseletmeIn", "$gy$j9T$.......",
-	    "$gy$j9T$.......$cNRMqOo1BZoPJWXL7mL/XFcsMy7fBAjii7zMCDc2zZ1");
+	    "$gy$j9T$.......$.xOKFTJExrsAB12xqOm7X4K3mMPTwx0aMN1dx5PQnQ5");
 
 	if (globerror)
 		printf("%d failed tests\n", globerror);
