@@ -154,8 +154,7 @@ static uint8_t *encode64_uint32_fixed(uint8_t *dst, size_t dstlen,
 	return dst;
 }
 
-/* static */
-uint8_t *encode64(uint8_t *dst, size_t dstlen,
+static uint8_t *encode64(uint8_t *dst, size_t dstlen,
     const uint8_t *src, size_t srclen)
 {
 	size_t i;
@@ -200,8 +199,7 @@ static const uint8_t *decode64_uint32_fixed(uint32_t *dst, uint32_t dstbits,
 	return src;
 }
 
-/* static */
-const uint8_t *decode64(uint8_t *dst, size_t *dstlen,
+static const uint8_t *decode64(uint8_t *dst, size_t *dstlen,
     const uint8_t *src, size_t srclen)
 {
 	size_t dstpos = 0;

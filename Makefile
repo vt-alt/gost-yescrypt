@@ -18,7 +18,7 @@ CFLAGS = -Wall -O2 -fomit-frame-pointer -DSKIP_MEMZERO
 LDFLAGS = -s -lrt
 
 PROJ = tests
-OBJS_YESCRYPT = yescrypt-opt.o yescrypt-common.o sha256.o insecure_memzero.o
+OBJS_YESCRYPT = yescrypt-opt.o sha256.o insecure_memzero.o
 OBJS_CRYPT = crypt-yescrypt.o crypt-gostyescrypt.o
 OBJS_GOST = gosthash2012.o
 OBJS_TESTS = $(OBJS_YESCRYPT) $(OBJS_GOST) $(OBJS_CRYPT) tests.o
@@ -35,6 +35,7 @@ check: tests
 yescrypt-opt.o: yescrypt-platform.c
 gosthash2012.o: gosthash2012.h gosthash2012_const.h gosthash2012_precalc.h\
 	gosthash2012_ref.h gosthash2012_sse2.h
+crypt-gostyescrypt.o: yescrypt-common.c
 
 tests: $(OBJS_TESTS)
 	$(LD) $(LDFLAGS) $(OBJS_TESTS) -o $@

@@ -21,7 +21,9 @@
 #ifndef __set_errno
 # define __set_errno(val) errno = (val)
 #endif
+#define YESCRYPT_INTERNAL
 #include "yescrypt.h"
+#include "yescrypt-common.c"
 #include "crypt-yescrypt.h"
 #include "gosthash2012.h"
 
