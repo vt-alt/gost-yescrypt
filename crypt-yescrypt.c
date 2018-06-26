@@ -46,10 +46,10 @@ char *_crypt_gensalt_yescrypt_rn(const char *prefix, unsigned long count,
 		 * thus, count is in range of 1..11 */
 		if (count <= 2) {
 			params.r = 8; /* N in 1KiB */
-			params.N = 512 << count;
+			params.N = 512ULL << count;
 		} else if (count <= 11) {
 			params.r = 32; /* N in 4KiB */
-			params.N = 128 << count;
+			params.N = 128ULL << count;
 		} else {
 			if (output_size > 0)
 				output[0] = '\0';
