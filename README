@@ -1,0 +1,4 @@
+crypt(3) implementation with yescrypt algo, and gost(yescrypt) algo
+(c) 2018 <vt@altlinux.org>
+
+Also see LICENSE.
